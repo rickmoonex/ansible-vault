@@ -1,0 +1,27 @@
+---
+- name: Setup Firewall
+  hosts: default
+  become: true
+
+  tasks:
+  - name: Allow SSH
+    community.general.ufw:
+      state: reloaded
+      rule: allow
+      to_port: '22'
+
+  - name: Allow Vault 8200
+    community.general.ufw:
+      state: reloaded
+      rule: allow
+      to_port: '8200'
+
+  - name: Allow Vault 8201
+    community.general.ufw:
+      state: reloaded
+      rule: allow
+      to_port: '8201'
+
+  - name: Enable Firewall
+    community.general.ufw:
+      state: enabled

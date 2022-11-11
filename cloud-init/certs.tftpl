@@ -1,0 +1,23 @@
+#!/bin/bash
+# Copy the correct CA certificate, TLS certificate and TLS key
+cat <<"EOF" | tee /opt/vault/tls/ca.pem > /dev/null
+${ca_cert}
+EOF
+cat <<"EOF" | tee /opt/vault/tls/tls.crt > /dev/null
+${tls_cert}
+EOF
+cat <<"EOF" | tee /opt/vault/tls/tls.key > /dev/null
+${tls_key}
+EOF
+
+# Set correct permissions
+chown -R vault:vault /opt/vault/tls
+chmod 0600 /opt/vault/tls/*
+
+# Restore SELinux context
+restorecon -RvF /opt/vault/tls
+
+# If you are using a self-signed certificate, make sure to configure it as a trusted root certificate
+cp /opt/vault/tls/ca.pem /usr/local/share/ca-certificates/ca.pem
+openssl x509 -in /usr/local/share/ca-certificates/ca.pem -inform PEM -out /usr/local/share/ca-certificates/ca.crt
+update-ca-certificates

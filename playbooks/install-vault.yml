@@ -1,0 +1,26 @@
+---
+- name: Install Vault
+  hosts: default
+  become: true
+
+  tasks:
+  - name: Add HashiCorp key to keyring
+    ansible.builtin.apt_key:
+      url: 'https://apt.releases.hashicorp.com/gpg'
+      keyring: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+  - name: Add HashiCorp source
+    ansible.builtin.apt_repository:
+      filename: hashicorp
+      repo: 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com jammy main'
+
+  - name: Install Vault
+    ansible.builtin.apt:
+      update_cache: true
+      name:
+        - vault
+
+  - name: Enable Vault command auto-completion
+    changed_when: false
+    ansible.builtin.command:
+      cmd: vault -autocomplete-install && complete -C /usr/bin/vault vault

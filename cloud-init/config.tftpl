@@ -1,0 +1,60 @@
+#!/bin/bash
+# Configurations
+cat <<"EOF" | sudo tee /etc/vault.d/vault.hcl > /dev/null
+disable_cache           = true
+disable_mlock           = true
+ui                      = true
+
+listener "tcp" {
+   address              = "0.0.0.0:8200"
+   cluster_addr         = "0.0.0.0:8201"
+   tls_client_ca_file   = "/opt/vault/tls/ca.pem"
+   tls_cert_file        = "/opt/vault/tls/tls.crt"
+   tls_key_file         = "/opt/vault/tls/tls.key"
+   tls_disable          = false
+}
+
+
+storage "raft" {
+  node_id              = "${node_id}"
+  path                 = "/opt/vault/data"
+
+  retry_join {
+    leader_api_addr   = "https://${node_id}.${domain}:8200"   
+  }
+   
+  %{ for node in secondary_nodes ~}
+  retry_join {
+    leader_api_addr   = "https://${node}.${domain}:8200"   
+  }
+
+  %{ endfor ~}
+}
+
+seal "azurekeyvault" {
+  vault_name  = "${azure_vault_name}"
+  key_name    = "${azure_key_name}"
+  tenant_id      = "${azure_tenant_id}"
+  client_id      = "${azure_client_id}"
+  client_secret  = "${azure_client_secret}"
+}
+
+cluster_addr            = "https://${node_id}.${domain}:8201"
+api_addr                = "https://${api_name}.${domain}:8200"
+max_lease_ttl           = "10h"
+default_lease_ttl       = "10h"
+cluster_name            = "vault"
+raw_storage_endpoint    = true
+disable_sealwrap        = true
+disable_printable_check = true
+EOF
+
+# Set permissions
+sudo chown vault:vault /etc/vault.d/vault.hcl
+sudo chmod 0644 /etc/vault.d/vault.hcl
+
+# Restore SELinux context
+sudo restorecon -RvF /etc/vault.d
+
+# Start and enable vault.service
+sudo systemctl enable --now vault.service
